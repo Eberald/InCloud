@@ -15,6 +15,12 @@ You choose the model with sliders and menus, InCloud writes the CLOUDY input fil
 CLOUDY and turns its output into clear, publication-ready plots. No input file has to be
 written by hand, but you can always see and edit it.
 
+This is a fully open-source project conceived as an educational tool to help users understand
+how H II and PDR models work, offering an accessible way to learn CLOUDY. As the application
+was developed primarily using [Claude Code](https://claude.com/claude-code) via Craft Anything,
+you may encounter some issues: please feel free to open an issue, and it will be addressed as
+soon as possible.
+
 This is a fully open-source project conceived as an educational tool to help users understand how HII and PDR models work, offering an accessible way to learn CLOUDY.
 As the application was developed primarily using Claude Code via CraftAnything, you may encounter some issues. Please feel free to open an issue, and I will address it as soon as possible.
 
@@ -28,6 +34,7 @@ As the application was developed primarily using Claude Code via CraftAnything, 
 - [Updating](#updating)
 - [Where things are kept](#where-things-are-kept)
 - [Building from source](#building-from-source)
+- [Licence](#licence)
 
 ## What it does
 
@@ -58,7 +65,9 @@ As the application was developed primarily using Claude Code via CraftAnything, 
   budget, dust, column densities, strongest lines, every iteration and every warning,
   caution and note from CLOUDY, explained in plain words.
 - **Wiki and manuals**: a short explanation of every option with links into the CLOUDY
-  manuals (Hazy 1, 2, 3), which can be read and searched inside InCloud (Ctrl+F).
+  manuals (Hazy 1, 2, 3), which can be read and searched inside InCloud (Ctrl+F). When a
+  CLOUDY has only the LaTeX sources of the manuals, InCloud offers to compile them (and to
+  install TinyTeX, without administrator rights, if TeX is missing).
 - **CLOUDY versions**: InCloud finds your CLOUDY by itself and can download, compile and
   install the official releases (C17 to C25) for you.
 - **Settings**: colours of every curve, ready-made colour sets, plot background (for example
@@ -167,6 +176,7 @@ incloud path/to/run-folder
 | Settings | `~/.config/incloud/settings.txt` |
 | CLOUDY versions installed by InCloud | `~/.local/share/incloud/cloudy` (chosen in the CLOUDY versions window) |
 | Runs | a temporary folder, or the folder chosen in the **Run** tab |
+| Manuals compiled by InCloud | `~/.local/share/incloud/manuals` |
 
 ## Building from source
 
@@ -180,7 +190,8 @@ dependencies are downloaded by Cargo.
 The code lives in `src/`: `app.rs` (the window), `model.rs` (the parameters and the input
 file), `results.rs` and `runinfo.rs` (reading CLOUDY's output), `figures.rs` and `export.rs`
 (the plots), `network.rs` (chemical networks), `pdfview.rs` and `pdffind.rs` (the manuals),
-`installer.rs` (installing CLOUDY), `updater.rs` (updating InCloud) and `wiki.rs` (the wiki). CLOUDY itself is not part of
+`texbuild.rs` (compiling the manuals), `installer.rs` (installing CLOUDY), `batch.rs` (grids of
+models), `updater.rs` (updating InCloud) and `wiki.rs` (the wiki). CLOUDY itself is not part of
 InCloud: it is a separate program with its own licence, by Gary Ferland and collaborators.
 
 ## Licence

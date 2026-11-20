@@ -22,6 +22,7 @@ mod installer;
 mod deckedit;
 mod runner;
 mod species;
+mod texbuild;
 mod theme;
 mod updater;
 mod welcome;
@@ -265,6 +266,10 @@ fn main() -> eframe::Result<()> {
                     Ok(r) => print_info(&r),
                     Err(e) => println!("load error: {e}"),
                 }
+                return Ok(());
+            }
+            "--texbuild-check" => {
+                texbuild::check(std::path::Path::new(args.get(i + 1).map(|s| s.as_str()).unwrap_or(".")));
                 return Ok(());
             }
             "--batch-check" => {

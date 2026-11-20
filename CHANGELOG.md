@@ -3,6 +3,12 @@
 Each update adds its notes at the top, as a list. After an update InCloud shows the notes
 that are new since the version you had, in its welcome window.
 
+## 1.0.1 — November 2026
+
+- When a CLOUDY has no PDF manuals but has their LaTeX sources (docs/latex), the Manuals tab offers to make them: InCloud compiles Hazy 1, 2 and 3 with pdflatex and bibtex, without writing into the CLOUDY folder.
+- If TeX is missing, InCloud can install TinyTeX in your home folder (no administrator password), or shows the command for your system's packages; missing TeX packages are installed while compiling.
+- README: what the project is for, how it was made, and its licence.
+
 ## 1.0 — November 2026
 
 - New Grids tab: a grid of models from ranges of any parameter (steps, steps in dex, lists or commands written by hand), with one input file per model and shell scripts that run them in parallel, here or on a server (bash or SLURM), shared out over several scripts.

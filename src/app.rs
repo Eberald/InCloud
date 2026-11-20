@@ -169,6 +169,9 @@ pub struct App {
     run_search: Option<RunSearch>,
     /// Settings should scroll to the Updates card (set by "Update available"), and since when
     goto_updates: Option<(bool, Instant)>,
+    /// making the manuals from their LaTeX sources
+    tex_job: Option<crate::texbuild::Job>,
+    tex_tools: Option<crate::texbuild::Tools>,
     /// grids of models and their scripts
     batch: crate::batch::Batch,
     batch_tab: u8,
@@ -276,6 +279,8 @@ impl App {
             versions_open: false,
             welcome: Default::default(),
             batch: Default::default(),
+            tex_job: None,
+            tex_tools: None,
             batch_tab: 0,
             batch_script: 1,
             welcomed: false,
@@ -2670,16 +2675,165 @@ impl App {
             return;
         }
         self.library_tried = true;
+        // pictures of the screen shown when there are no manuals
+        if self.screenshot.is_some() && std::env::var("INCLOUD_TEX").is_ok() {
+            return;
+        }
         let mut starts = vec![PathBuf::from(self.cloudy_exe.trim())];
         starts.extend(self.data_path.split(':').filter(|p| p.trim().len() > 1).map(|p| PathBuf::from(p.trim())));
         starts.extend(self.installs.iter().map(|i| i.exe.clone()));
         if let Some(d) = pdfview::find_docs(&starts) {
             self.library = Library::open(&d, ctx);
+            return;
+        }
+        // the manuals InCloud made from the LaTeX sources of this CLOUDY
+        if let Some(rel) = crate::texbuild::sources(&starts) {
+            let d = crate::texbuild::built_dir(&rel);
+            if d.join("hazy1.pdf").is_file() {
+                self.library = Library::open(&d, ctx);
+            }
         }
     }
 
+    fn cloudy_starts(&self) -> Vec<PathBuf> {
+        let mut starts = vec![PathBuf::from(self.cloudy_exe.trim())];
+        starts.extend(self.data_path.split(':').filter(|p| p.trim().len() > 1).map(|p| PathBuf::from(p.trim())));
+        starts.extend(self.installs.iter().map(|i| i.exe.clone()));
+        starts
+    }
+
     fn no_manuals_ui(&mut self, ui: &mut egui::Ui) {
+        use crate::texbuild::{self, State};
+        ui.set_max_width(820.0);
         ui.label(RichText::new("The CLOUDY manuals (hazy1.pdf, hazy2.pdf, hazy3.pdf) were not found beside your CLOUDY installation.").weak());
+        ui.add_space(8.0);
+        let fake = self.screenshot.is_some() && std::env::var("INCLOUD_TEX").is_ok();
+        let release = if fake { Some(PathBuf::from("/home/user/cloudy/c25.00")) } else { texbuild::sources(&self.cloudy_starts()) };
+
+        // a build or an install going on, or just ended
+        if let Some(job) = &self.tex_job {
+            let v = job.view();
+            let mut close = false;
+            let mut stop = false;
+            egui::Frame::new().fill(ui.visuals().faint_bg_color).stroke(ui.visuals().widgets.noninteractive.bg_stroke).corner_radius(10.0).inner_margin(14).show(ui, |ui| {
+                ui.set_width(ui.available_width());
+                match &v.state {
+                    State::Running => {
+                        ui.ctx().request_repaint_after(Duration::from_millis(300));
+                        ui.horizontal(|ui| {
+                            ui.add(egui::Spinner::new().size(22.0));
+                            ui.label(RichText::new(&v.what).strong().size(16.0));
+                            ui.label(RichText::new(format!("{:.0} s", v.started.elapsed().as_secs_f32())).weak());
+                        });
+                        ui.label(&v.step);
+                        if ui.button("Stop").clicked() {
+                            stop = true;
+                        }
+                    }
+                    State::Done => {
+                        ui.label(RichText::new(format!("✔ {}: done", v.what)).strong().color(OK));
+                        if v.out.is_some() {
+                            ui.label("The manuals are ready.");
+                        }
+                        if ui.button("OK").clicked() {
+                            close = true;
+                        }
+                    }
+                    State::Failed(e) => {
+                        ui.label(RichText::new(format!("✘ {}: it didn't work", v.what)).strong().color(BAD));
+                        ui.add(egui::Label::new(e.as_str()).wrap());
+                        if ui.button("Close").clicked() {
+                            close = true;
+                        }
+                    }
+                }
+                egui::CollapsingHeader::new("What it did").id_salt("tex_log").show(ui, |ui| {
+                    egui::ScrollArea::vertical().max_height(220.0).stick_to_bottom(true).show(ui, |ui| {
+                        for l in v.log.iter().rev().take(150).rev() {
+                            ui.label(RichText::new(l).monospace().small());
+                        }
+                    });
+                });
+            });
+            if stop {
+                job.cancel();
+            }
+            if v.state != State::Running {
+                if v.out.is_some() {
+                    // open the new manuals at once
+                    self.library_tried = false;
+                    self.tex_job = None;
+                    self.ensure_library(ui.ctx());
+                    return;
+                }
+                if close {
+                    self.tex_job = None;
+                    self.tex_tools = None;
+                }
+            }
+            if self.tex_job.as_ref().is_some_and(|j| j.running()) {
+                return;
+            }
+            ui.add_space(8.0);
+        }
+
+        match release {
+            Some(rel) => {
+                if self.tex_tools.is_none() {
+                    self.tex_tools = Some(if fake { texbuild::Tools { pdflatex: false, bibtex: false, tlmgr: false, downloader: true, hint: "sudo apt install texlive-latex-extra texlive-bibtex-extra texlive-fonts-recommended".into() } } else { texbuild::tools() });
+                }
+                let t = self.tex_tools.clone().unwrap_or_default();
+                egui::Frame::new().fill(ACCENT.gamma_multiply(0.06)).stroke(egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.6))).corner_radius(10.0).inner_margin(14).show(ui, |ui| {
+                    ui.set_width(ui.available_width());
+                    ui.label(RichText::new("Make them from their LaTeX sources?").strong().size(17.0));
+                    ui.add(egui::Label::new(format!("Your CLOUDY has the sources of the manuals ({}). InCloud can compile them into PDFs: it takes a few minutes, nothing is written into the CLOUDY folder, and the PDFs are kept in {}.", rel.join("docs/latex").display(), texbuild::built_dir(&rel).display())).wrap());
+                    ui.add_space(6.0);
+                    let row = |ui: &mut egui::Ui, ok: bool, good: &str, bad: &str| {
+                        if ok {
+                            ui.label(RichText::new(format!("✔ {good}")).color(OK));
+                        } else {
+                            ui.label(RichText::new(format!("✘ {bad}")).color(BAD));
+                        }
+                    };
+                    row(ui, t.pdflatex, "pdflatex is installed", "pdflatex is missing: it turns LaTeX into PDF");
+                    row(ui, t.bibtex, "bibtex is installed", "bibtex is missing: without it the references show as “?”");
+                    ui.add_space(8.0);
+                    if t.pdflatex {
+                        let b = egui::Button::new(RichText::new("📖 Make the manuals").strong().color(Color32::WHITE)).fill(ACCENT).min_size(egui::vec2(0.0, 34.0));
+                        if ui.add(b).clicked() {
+                            self.tex_job = Some(texbuild::Job::build(rel.clone()));
+                        }
+                    }
+                    if !t.pdflatex || !t.bibtex {
+                        ui.add_space(8.0);
+                        ui.label(RichText::new(if t.pdflatex { "To have the references too, install the rest of TeX:" } else { "TeX is needed first. Two ways:" }).strong());
+                        ui.add_space(4.0);
+                        ui.label(RichText::new("1. Let InCloud install TinyTeX").strong());
+                        ui.add(egui::Label::new(RichText::new("A small TeX distribution in your home folder (~/.TinyTeX, about 250 MB with what the manuals use). No administrator password; it needs the network. It can be removed by deleting that folder.").small()).wrap());
+                        if ui.add_enabled(t.downloader, egui::Button::new("⬇ Install TinyTeX")).on_disabled_hover_text("curl or wget is needed to download it").clicked() {
+                            self.tex_job = Some(texbuild::Job::install_tex());
+                            self.tex_tools = None;
+                        }
+                        ui.add_space(6.0);
+                        ui.label(RichText::new("2. Or install TeX from your system's packages").strong());
+                        ui.add(egui::Label::new(RichText::new("In a terminal (it asks your password):").small()).wrap());
+                        ui.horizontal(|ui| {
+                            ui.label(RichText::new(&t.hint).monospace());
+                            if ui.small_button("Copy").clicked() {
+                                ui.ctx().copy_text(t.hint.clone());
+                            }
+                        });
+                        if ui.button("Check again").on_hover_text("After installing TeX").clicked() {
+                            self.tex_tools = None;
+                        }
+                    }
+                });
+            }
+            None => {
+                ui.add(egui::Label::new(RichText::new("Neither the PDFs nor their LaTeX sources (docs/latex) are in this CLOUDY. The PDFs can be downloaded from the CLOUDY releases on nublado.org (docs folder) and chosen here.").weak()).wrap());
+            }
+        }
+        ui.add_space(10.0);
         if ui.button("Choose the folder with the manuals…").clicked() {
             self.pick = Pick::HazyDir;
             self.dialog.pick_directory();
