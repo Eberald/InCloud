@@ -1,0 +1,24 @@
+# build output
+/target/
+
+# local build set-up of the machine it was developed on: dependencies copied for an
+# offline build, and a linker wrapper. A normal `cargo build` needs neither.
+/vendor/
+/.cargo/
+/tools/
+
+# pictures taken while checking the interface
+/shots/
+
+# editors and systems
+*.swp
+*~
+.DS_Store
+.idea/
+.vscode/
+
+# CLOUDY runs and exports left in the source folder
+*.ovr
+*.prog
+*.out
+export-demo/

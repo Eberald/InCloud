@@ -1,0 +1,21 @@
+[package]
+name = "incloud"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+eframe = { version = "0.37", default-features = false, features = ["default_fonts", "glow", "wayland", "x11"] }
+egui_plot = "0.38"
+egui-file-dialog = "0.16"
+resvg = "0.45"
+usvg = "0.45"
+svg2pdf = "0.13"
+hayro = "0.9"
+lopdf = "0.47"
+image = { version = "0.25", default-features = false, features = ["png"] }
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 2

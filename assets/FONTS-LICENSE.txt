@@ -1,0 +1,3 @@
+fallback.ttf (DejaVu Sans) and fallback-serif.ttf (DejaVu Serif) are DejaVu fonts,
+derived from Bitstream Vera. They are free to use, copy and redistribute under the
+Bitstream Vera Fonts license / DejaVu changes (public domain). See https://dejavu-fonts.github.io/License.html

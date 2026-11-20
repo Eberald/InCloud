@@ -1,0 +1,90 @@
+//! The built-in wiki: a short explanation of everything in InCloud, the CLOUDY command it writes,
+//! and links to the sections of the manuals (Hazy 1, 2, 3) that describe it.
+
+pub struct Topic {
+    pub key: &'static str,
+    pub group: &'static str,
+    pub title: &'static str,
+    pub text: &'static str,
+    /// the CLOUDY command InCloud writes for this, when there is one
+    pub command: &'static str,
+    /// (volume, title of the section in the manual)
+    pub refs: &'static [(u8, &'static str)],
+}
+
+const fn t(key: &'static str, group: &'static str, title: &'static str, text: &'static str, command: &'static str, refs: &'static [(u8, &'static str)]) -> Topic {
+    Topic { key, group, title, text, command, refs }
+}
+
+pub const GROUPS: [&str; 8] = ["Getting started", "Radiation", "Gas", "Geometry", "Stopping the run", "Output", "Plots", "Files and tools"];
+
+pub const TOPICS: &[Topic] = &[
+    t("overview", "Getting started", "What InCloud does", "InCloud writes a CLOUDY input file from the choices in the left panel, runs CLOUDY, reads the files it saves and draws the results. A model needs three things: the radiation that strikes the cloud, the gas it strikes, and where to stop the calculation.", "", &[(1, "What must be specified"), (1, "What is computed and reported"), (2, "Final Printout")]),
+    t("input", "Getting started", "The input file", "The “Run” tab shows the exact input file InCloud will give to CLOUDY. Every choice in the program becomes one line of it. You can add your own commands, or open the editor and change any line: an edited file is run exactly as written, until you go back to the settings.", "", &[(1, "The input deck"), (1, "Command format")]),
+    t("model", "Getting started", "Model name", "The name is the title of the run and the start of the names of its files.", "title …", &[(1, "Command format")]),
+
+    t("source", "Radiation", "Ionising source", "The shape of the radiation field that strikes the cloud. Its brightness is set separately by the ionisation parameter.", "", &[(1, "THE INCIDENT RADIATION FIELD"), (1, "INCIDENT RADIATION FIELD SHAPE")]),
+    t("blackbody", "Radiation", "Blackbody", "A blackbody at temperature T★, a simple stand-in for a hot star.", "blackbody 40000", &[(1, "Blackbody t=e5 K")]),
+    t("agn", "Radiation", "AGN continuum", "The built-in active-galactic-nucleus continuum: a big blue bump plus an X-ray power law.", "AGN 6.00 -1.40 -0.50 -1.0", &[(1, "AGN T =1.5e5 k")]),
+    t("ismfield", "Radiation", "Interstellar radiation field", "The radiation field of the local interstellar medium. It comes with its own brightness, so it takes no log U: the slider sets how many times stronger than the local field it is (log G/G_ISM). It has no photons that ionise hydrogen, so the cloud is a PDR.", "table ism", &[(1, "Table ism")]),
+    t("customsed", "Radiation", "Custom spectrum", "Your own spectrum, loaded from a file or typed as two columns. InCloud writes it in the format CLOUDY expects, beside the input file. Only the shape matters: the brightness comes from log U. It must reach energies above 1 Ryd to contain ionising photons.", "table SED \"incloud_custom.sed\"", &[(1, "Table SED command"), (2, "Energy units; the Rydberg")]),
+    t("ionu", "Radiation", "Ionisation parameter log U", "The ratio of hydrogen-ionising photons to hydrogen atoms at the illuminated face of the cloud. Higher values give a deeper ionised zone and stronger high-ionisation lines.", "ionization parameter -2", &[(1, "ionization parameter ="), (1, "Intensity and luminosity cases")]),
+
+    t("hden", "Gas", "Hydrogen density", "The logarithm of the total hydrogen density at the illuminated face, in atoms per cubic centimetre.", "hden 2", &[(1, "hden 5.6"), (1, "DENSITY LAWS")]),
+    t("density_law", "Gas", "Constant density or pressure", "With constant density the hydrogen density stays the same at every depth. With constant pressure the gas becomes denser where it cools, as in the transition from the ionised gas to the PDR.", "constant pressure", &[(1, "Constant density, pressure, gas pressure"), (1, "Constant pressure [no continuum")]),
+    t("abundances", "Gas", "Abundances", "The mix of chemical elements in the gas, from stored sets such as ISM, H II region or Orion.", "abundances ism no grains", &[(1, "Abundances he c"), (1, "CHEMICAL COMPOSITION")]),
+    t("grains", "Gas", "Grains", "Dust mixed with the gas. Grains absorb light, heat the gas through the photoelectric effect and are where H₂ forms.", "grains ism", &[(1, "Grains"), (1, "Effects of grains"), (3, "GRAIN PHYSICS")]),
+    t("metals", "Gas", "Metallicity", "Scales every element heavier than helium, and the grains with them, by this factor (logarithmic).", "metals 0.3 log", &[(1, "Metals 0.05"), (1, "Scaling grains and metals together")]),
+    t("cosmicrays", "Gas", "Cosmic rays", "The galactic background of cosmic rays. They keep the molecular gas weakly ionised, which drives its chemistry, so they are needed for models that reach the molecular zone.", "cosmic rays background", &[(1, "Cosmic rays background"), (1, "Cosmic rays [options")]),
+    t("turbulence", "Gas", "Turbulence", "Adds a random gas velocity that broadens the lines and changes their optical depths.", "turbulence 2 km/s", &[(1, "Turbulence = 100 km/s")]),
+
+    t("geometry", "Geometry", "Slab or sphere", "A slab is an open plane-parallel layer lit from one side. A sphere closes the cloud around the source, so that diffuse radiation crosses the central hole.", "sphere", &[(1, "Geometry"), (1, "Sphere [options]"), (1, "GEOMETRY")]),
+    t("radius", "Geometry", "Inner radius", "The logarithm of the distance between the source and the illuminated face of the sphere, in centimetres.", "radius 18", &[(1, "Radius r(inner)")]),
+
+    t("stop", "Stopping the run", "Stopping criteria", "The calculation moves into the cloud zone by zone and ends at the first criterion that is met.", "", &[(1, "STOPPING CRITERIA")]),
+    t("stop_temp", "Stopping the run", "Lowest temperature", "Stops when the gas gets colder than this. Without it CLOUDY stops at 4000 K, before the PDR and the molecular gas.", "stop temperature 10 linear", &[(1, "Stop temperature 1e3 K")]),
+    t("stop_av", "Stopping the run", "Extinction A_V", "Stops at this visual extinction, measured in magnitudes from the illuminated face.", "stop AV 10", &[(1, "Stop Av 12.1")]),
+    t("stop_col", "Stopping the run", "Column density", "Stops when the total hydrogen column density reaches this value (logarithm, in cm⁻²).", "stop column density 22", &[(1, "Stop column density = 23")]),
+    t("stop_thick", "Stopping the run", "Thickness", "Stops at this depth into the cloud (logarithm, in cm).", "stop thickness 19", &[(1, "Stop thickness 9.3")]),
+    t("stop_efrac", "Stopping the run", "Electron fraction", "Stops when the ratio of electrons to hydrogen falls below this value (logarithm).", "stop efrac -2", &[(1, "Stop efrac = 1.05")]),
+    t("stop_zone", "Stopping the run", "Number of zones", "Stops after this many zones. Useful for quick tests.", "stop zone 800", &[(1, "Stop zone 123")]),
+    t("converge", "Stopping the run", "Iterate to convergence", "CLOUDY repeats the calculation until the optical depths stop changing, or until the largest number of iterations is reached. The tolerance is the change still accepted between two iterations (0.2 means 20%, CLOUDY's default). Run info says whether the model converged.", "iterate to convergence max=10", &[(1, "Iterate to convergence"), (1, "Convergence problems")]),
+    t("iterate", "Stopping the run", "Iterations", "Repeats the calculation so that the optical depths found in one pass are used in the next. Two passes are usually needed for reliable emission lines.", "iterate", &[(1, "Iterate [2 times")]),
+
+    t("lines", "Output", "Lines to save", "The emission lines whose local emissivity is saved at every depth. InCloud integrates them over the cloud to get the intensities. The H₂ 2.12 µm line also turns on the large H₂ model, which is slower.", "save lines, emissivity", &[(1, "Save lines, emissivity"), (1, "Air vs vacuum wavelengths"), (2, "Intrinsic and emergent line intensities")]),
+    t("chemistry", "Output", "Reaction rates", "For each chosen species InCloud saves the rate of every reaction that forms or destroys it. These feed the reaction-rate plot, its table and the chemical network. Pick any species from the list or type its name, even if none of the saved lines comes from it. CLOUDY can save up to 40 species in a run, and some, such as C²⁺ or Fe⁺, take no part in its chemical network.", "save chemistry rates", &[(1, "Save chemistry rates"), (1, "CONTROLLING CHEMICAL MODELS"), (3, "Heavy element molecules")]),
+    t("extra", "Output", "Extra commands", "Any CLOUDY command that InCloud has no control for. The lines are added to the input file exactly as written.", "", &[(1, "INTRODUCTION TO COMMANDS"), (1, "CONTROLLING OUTPUT")]),
+
+    t("p_thermal", "Plots", "Thermal structure", "The electron temperature at each depth, set by the balance between heating and cooling.", "save overview", &[(1, "Save overview"), (3, "THERMAL EQUILIBRIUM")]),
+    t("p_structure", "Plots", "H II / PDR / fronts", "The fractions of ionised, atomic and molecular hydrogen with depth. The ionisation front (IF) is where H⁺ falls below 50%, the dissociation front (DF) is where 2H₂/H rises above 50%, and C/CO is where half of the carbon is in CO.", "save overview", &[(1, "Save overview"), (3, "The H2 molecule")]),
+    t("p_density", "Plots", "Density", "The hydrogen, electron and H₂ densities with depth.", "save overview", &[(1, "Save overview"), (1, "DENSITY LAWS")]),
+    t("p_molecules", "Plots", "Molecular fractions", "The share of hydrogen in H₂, of carbon in CO and of oxygen in H₂O. The Table button lists the values zone by zone, with their mean.", "save overview", &[(3, "H- AND MOLECULES")]),
+    t("p_ions", "Plots", "Ionisation of an element", "The fraction of an element in each ionisation stage with depth. The Table button lists the values zone by zone, with their mean.", "save element", &[(1, "Save element"), (3, "Ionization balance")]),
+    t("p_lines", "Plots", "Line intensities", "The intensity of each saved line relative to Hβ, integrated over the whole cloud.", "save lines, emissivity", &[(2, "THE EMISSION LINES"), (2, "Intrinsic and emergent line intensities")]),
+    t("p_emissivity", "Plots", "Line emissivity", "How strongly each line is emitted at each depth, scaled to its own peak.", "save lines, emissivity", &[(1, "Save lines, emissivity")]),
+    t("p_cumulative", "Plots", "Where lines form", "The fraction of each line's total intensity produced between the illuminated face and each depth.", "", &[(2, "THE EMISSION LINES")]),
+    t("p_ratios", "Plots", "Line ratios", "Any line divided by any other. Solid curves are the local ratio; dashed curves are the ratio integrated up to that depth.", "", &[(2, "Intrinsic and emergent line intensities")]),
+    t("p_bpt", "Plots", "BPT diagram", "Compares [O III]/Hβ with [N II]/Hα, [S II]/Hα or [O I]/Hα to separate gas ionised by stars from gas ionised by an active nucleus. The lines are from Kewley et al. 2001 and 2006, Kauffmann et al. 2003 and Schawinski et al. 2007. Other runs can be added as extra points.", "", &[(2, "Intrinsic line intensities and luminosities")]),
+    t("p_continuum", "Plots", "Continuum (SED)", "The incident, transmitted, diffuse and total spectrum. “Saved lines” shows the total continuum without its lines and stands each saved emission line on it as a thin spike with no width: the spike adds the intensity of the line to the continuum at that wavelength. Lines too faint to rise above the continuum are left out: Settings says how faint.", "save continuum", &[(1, "Save continuum"), (2, "THE CONTINUUM")]),
+    t("p_grains", "Plots", "Grain temperature", "The temperature of each grain material and size with depth.", "save grain temperature", &[(1, "Save grain"), (3, "GRAIN PHYSICS")]),
+    t("p_heatcool", "Plots", "Heating and cooling", "The total heating rate and the processes that dominate heating and cooling at each depth.", "save heating", &[(1, "Save heating"), (1, "Save cooling"), (3, "Evaluation of the heating function"), (3, "Evaluation of the cooling function")]),
+    t("p_rates", "Plots", "Reaction rates", "The strongest reactions forming (solid) and destroying (dashed) a species with depth. The Table button lists every reaction with its share.", "save chemistry rates", &[(1, "Save chemistry rates")]),
+    t("p_network", "Plots", "Chemical network", "With one species: the reactions that form and destroy it. With several: arrows showing what share of the destruction of one species produces another. To add a species that was not saved, choose it in the list of the network: CLOUDY then computes the model again.", "save chemistry rates", &[(1, "Save chemistry rates"), (3, "Heavy element molecules")]),
+    t("p_custom", "Plots", "Custom plots", "Plot any saved quantity against any other, on linear or logarithmic axes.", "", &[(1, "Save commands")]),
+    t("zoom", "Plots", "Zooming and saving a view", "Hold the left mouse button and drag a rectangle to zoom in. The “Back” button on the plot, or Ctrl+Z with the pointer on it, returns to the previous view one step at a time. Drag with the right button to move, double-click to see the whole plot again. Labels appear where there is room. Export can save just the zoomed view.", "", &[]),
+
+    t("runfolder", "Files and tools", "Where runs go", "With “Run in /tmp” the files are deleted when InCloud closes. Otherwise every run gets its own folder.", "", &[(1, "Reading and Writing Files")]),
+    t("cloudy", "Files and tools", "CLOUDY installation", "InCloud finds CLOUDY from CLOUDY_EXE, CLOUDY_DATA_PATH and the aliases in your shell start-up files. Click the CLOUDY version at the top right to choose another one, or to install one: InCloud downloads the official source from nublado.org, compiles it on this computer and checks it with CLOUDY's own test. Compiling needs a C++ compiler, make and perl; InCloud says how to get them when they are missing. The data folder holds the atomic data CLOUDY needs.", "", &[(1, "The Search Path for Input Files")]),
+    t("export", "Files and tools", "Export", "Saves plots as PDF, PNG, SVG or CSV and data tables as CSV or text. All file names start with the prefix you choose.", "", &[(1, "Save commands")]),
+    t("settings", "Files and tools", "Settings", "The colours of every curve, region and front, ready-made colour sets, the thickness of the curves, what the plots show at the start, the size and format of saved figures, the size of the interface and where CLOUDY is. The colours are used on screen and in saved figures, and are remembered the next time InCloud opens.", "", &[]),
+    t("checks", "Getting started", "Checks before a run", "Before starting CLOUDY, InCloud looks at the chosen values. Red: CLOUDY would stop at once (for example a cool star with a high log U, or a radiation source without its brightness); the run waits until it is fixed, or you run it anyway. Amber: the run works but something may not be what you expect.", "", &[(1, "What must be specified")]),
+    t("batch", "Files and tools", "Grids of models", "The Grids tab makes many models at once. Each parameter has a name used as a placeholder ({U}, {hden}…), the command it writes in the input file (\"ionization parameter {U}\") and its values: a range with a step, a range with a step in dex (for quantities given as plain numbers), or a list. Every combination is one model. InCloud writes one input file per model, with {name} replaced by the model name, and shell scripts that run them with CLOUDY a few at a time (they wait for a free place before starting the next). With several scripts the models are shared out evenly, for example to run them on two machines or as two cluster jobs. For a server, give the path of CLOUDY and the run folder as they are there, copy the folder over and start start_all.sh (or each batch_N.sh with sbatch). A script started again skips the models that already ended. models.csv lists the parameters of every model.", "ionization parameter {U}\nhden {hden}\nsave overview \"{name}.ovr\" last", &[(1, "Save commands")]),
+    t("openrun", "Files and tools", "Opening a run", "Choose the folder of a finished run. InCloud reads its input file (or the copy of it at the top of the text output) to see which file each save command wrote, and recognises the other files from what they hold, so file names are free. Run info → Files lists what was found, what each file is used for, and the save commands to add for what is missing. With several runs in one folder, each is told apart by the name of its .in or .out file.", "save overview \"model.ovr\" last", &[(1, "Save commands")]),
+    t("update", "Files and tools", "Updating InCloud", "InCloud can update itself from the folder it was built from. When that folder is a git repository it fetches the new commits; it also notices files changed there by hand. “Update now” pulls, builds and replaces the program, then “Restart” opens the new version. From a terminal, ./install.sh --update does the same.", "", &[]),
+    t("runinfo", "Files and tools", "Run info", "Everything the output of a run reports: why it stopped, whether it converged, the physical conditions, energy budget, dust, column densities, strongest lines, each iteration and every message from CLOUDY. It opens by itself when you open a finished run.", "", &[(2, "Final Printout"), (2, "Warnings, Cautions, Surprises, and Notes")]),
+    t("warnings", "Files and tools", "CLOUDY warnings", "CLOUDY ends each iteration with warnings (something went wrong), cautions (accuracy may suffer), surprises (unusual but not wrong) and notes. They are worth reading before trusting a model.", "", &[(2, "Warnings, Cautions, Surprises, and Notes"), (2, "LIMITS, ASSUMPTIONS, AND RELIABILITY")]),
+];
+
+pub fn topic(key: &str) -> Option<&'static Topic> {
+    TOPICS.iter().find(|t| t.key == key)
+}
